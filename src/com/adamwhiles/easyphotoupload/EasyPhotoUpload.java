@@ -30,8 +30,8 @@ import com.facebook.android.*;
 import com.facebook.android.Facebook.*;
 
 public class EasyPhotoUpload extends Activity {
-	 final static int PICK_EXISTING_PHOTO_RESULT_CODE = 1;
-    Facebook facebook = new Facebook("420243144692776");
+	final static int PICK_EXISTING_PHOTO_RESULT_CODE = 1;
+    Facebook facebook = new Facebook("");
     private SharedPreferences mPrefs;
     TextView txtImageLocation;
     File imageFile;
@@ -43,16 +43,13 @@ public class EasyPhotoUpload extends Activity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
-  
-     		   
-  
-        
-        
+        // Setup access token and store the token
         mPrefs = getPreferences(MODE_PRIVATE);
         String access_token = mPrefs.getString("access_token", null);
         long expires = mPrefs.getLong("access_expires", 0);
                 
-        
+        // Check if access token for Facebook has already need generated and pickup the session so the user doesnt
+        // have to login again.
         if(access_token != null) {
             facebook.setAccessToken(access_token);
         }
@@ -82,10 +79,11 @@ public class EasyPhotoUpload extends Activity {
             });
         }
         
+        // Set up upload photo button and display in view
         txtImageLocation = (TextView)findViewById(R.id.textImageLocation);
         Button buttonSelectImage = (Button)findViewById(R.id.btnSelectImage);
         buttonSelectImage.setOnClickListener(new Button.OnClickListener(){
-
+              // Set up onclick event for photo upload button and launch the android gallery
         	  @Override
         	  public void onClick(View arg0) {
         	   // TODO Auto-generated method stub
@@ -101,22 +99,24 @@ public class EasyPhotoUpload extends Activity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);        
         switch (requestCode) {
+        
+        // Do this if result came from selection in android photo gallery
         case PICK_EXISTING_PHOTO_RESULT_CODE: {   
           String picCaption = createAlert();
         if (resultCode == RESULT_OK){
+        	  // Get the Uri of the photo selected in the gallery
         	  Uri photoUri = data.getData();
+        	  // Get the actual path to the image
         	  String imagePath = getPath(photoUri);
         	  byte[] data1 = null;
-        	        	  
-                  
-                Bitmap bi = BitmapFactory.decodeFile(imagePath);
-               	ByteArrayOutputStream baos = new ByteArrayOutputStream();
-               	bi.compress(Bitmap.CompressFormat.JPEG, 100, baos);
-               	data1 = baos.toByteArray();
-               
-                uploadImage(data1, picCaption);
-                
-                
+              // Process the image taken from the gallery
+              Bitmap bi = BitmapFactory.decodeFile(imagePath);
+              ByteArrayOutputStream baos = new ByteArrayOutputStream();
+              bi.compress(Bitmap.CompressFormat.JPEG, 100, baos);
+              data1 = baos.toByteArray();
+              // Call method to upload the photo to Facebook 
+              uploadImage(data1, picCaption);
+ 
               }
         	 
         	 
@@ -131,7 +131,7 @@ public class EasyPhotoUpload extends Activity {
     }
         
     }
-    
+    // Method to get real path to photo from android gallery and output that path
     public String getPath(Uri contentUri) {
 
         // can post image
@@ -146,7 +146,7 @@ public class EasyPhotoUpload extends Activity {
 
         return cursor.getString(column_index);
 }
-    
+    // Method for uploading photo to Facebook wall and album.
     private void uploadImage(byte[] byteArray,String caption) 
     {
         Bundle params = new Bundle(); 
@@ -168,8 +168,9 @@ public class EasyPhotoUpload extends Activity {
              
      }
     
+    // Create dialog box to get user input for photo caption
     public String createAlert() {      
-        AlertDialog.Builder alert = new AlertDialog.Builder(this);                 
+          AlertDialog.Builder alert = new AlertDialog.Builder(this);                 
      	  alert.setTitle("Enter Caption for Photo");  
      	  alert.setMessage("Caption :");
      	  final EditText input = new EditText(this); 
@@ -194,7 +195,6 @@ public class EasyPhotoUpload extends Activity {
      		   return imageCaption;
      		   
   }
-    
     public class PhotoUploadListener extends BaseRequestListener {
 
         public void onComplete(final String response, final Object state) {
