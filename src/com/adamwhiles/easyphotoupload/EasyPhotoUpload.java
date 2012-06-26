@@ -102,7 +102,7 @@ public class EasyPhotoUpload extends Activity {
         super.onActivityResult(requestCode, resultCode, data);        
         switch (requestCode) {
         case PICK_EXISTING_PHOTO_RESULT_CODE: {   
-          
+          String picCaption = createAlert();
         if (resultCode == RESULT_OK){
         	  Uri photoUri = data.getData();
         	  String imagePath = getPath(photoUri);
@@ -113,24 +113,10 @@ public class EasyPhotoUpload extends Activity {
                	ByteArrayOutputStream baos = new ByteArrayOutputStream();
                	bi.compress(Bitmap.CompressFormat.JPEG, 100, baos);
                	data1 = baos.toByteArray();
-               	
-                Bundle params = new Bundle();
-                params.putString(Facebook.TOKEN, facebook.getAccessToken());
-                params.putString("caption", createAlert());
-                params.putByteArray("photo", data1);
+               
+                uploadImage(data1, picCaption);
                 
-                try {
-					facebook.request("me/photos",params,"POST");
-				} catch (FileNotFoundException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				} catch (MalformedURLException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				} 
+                
               }
         	 
         	 
@@ -160,6 +146,27 @@ public class EasyPhotoUpload extends Activity {
 
         return cursor.getString(column_index);
 }
+    
+    private void uploadImage(byte[] byteArray,String caption) 
+    {
+        Bundle params = new Bundle(); 
+        params.putString(Facebook.TOKEN, facebook.getAccessToken());
+        params.putByteArray("picture", byteArray);  
+        params.putString("caption",caption); 
+        try {
+			facebook.request("me/photos",params,"POST");
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (MalformedURLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+             
+     }
     
     public String createAlert() {      
         AlertDialog.Builder alert = new AlertDialog.Builder(this);                 
