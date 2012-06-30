@@ -25,6 +25,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.facebook.android.*;
 import com.facebook.android.Facebook.*;
@@ -36,13 +37,13 @@ public class EasyPhotoUpload extends Activity {
     TextView txtImageLocation;
     File imageFile;
     String imageCaption = null;
-    
-    
+    byte[] data1 = null;    
     
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.main);
+        setContentView(R.layout.main);        
+        
         // Setup access token and store the token
         mPrefs = getPreferences(MODE_PRIVATE);
         String access_token = mPrefs.getString("access_token", null);
@@ -80,46 +81,55 @@ public class EasyPhotoUpload extends Activity {
         }
         
         // Set up upload photo button and display in view
-        txtImageLocation = (TextView)findViewById(R.id.textImageLocation);
+        Button buttonUploadImage = (Button)findViewById(R.id.btnUploadPhotos);
+        buttonUploadImage.setOnClickListener(new Button.OnClickListener(){
+              // Set up onclick event for photo upload button and launch the android gallery
+        	  @Override
+        	  public void onClick(View arg0) {
+        	   // TODO Auto-generated method stub
+
+        	   }});
+        
         Button buttonSelectImage = (Button)findViewById(R.id.btnSelectImage);
         buttonSelectImage.setOnClickListener(new Button.OnClickListener(){
               // Set up onclick event for photo upload button and launch the android gallery
         	  @Override
         	  public void onClick(View arg0) {
         	   // TODO Auto-generated method stub
+        		  
         	   Intent intent = new Intent(Intent.ACTION_PICK,
         	     android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
         	   startActivityForResult(intent, PICK_EXISTING_PHOTO_RESULT_CODE);
+        	   
         	   }});
+        
     }
     
-    
-
     @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);        
         switch (requestCode) {
         
         // Do this if result came from selection in android photo gallery
         case PICK_EXISTING_PHOTO_RESULT_CODE: {   
-          String picCaption = createAlert();
+          
         if (resultCode == RESULT_OK){
         	  // Get the Uri of the photo selected in the gallery
         	  Uri photoUri = data.getData();
         	  // Get the actual path to the image
-        	  String imagePath = getPath(photoUri);
-        	  byte[] data1 = null;
+        	  final String imagePath = getPath(photoUri);
+        	  
               // Process the image taken from the gallery
               Bitmap bi = BitmapFactory.decodeFile(imagePath);
               ByteArrayOutputStream baos = new ByteArrayOutputStream();
               bi.compress(Bitmap.CompressFormat.JPEG, 100, baos);
               data1 = baos.toByteArray();
               // Call method to upload the photo to Facebook 
-              uploadImage(data1, picCaption);
- 
+              createAlert();      
+              
               }
         	 
-        	 
+         
         break;
         }
         default: {
@@ -129,7 +139,7 @@ public class EasyPhotoUpload extends Activity {
         
         
     }
-        
+
     }
     // Method to get real path to photo from android gallery and output that path
     public String getPath(Uri contentUri) {
@@ -177,21 +187,24 @@ public class EasyPhotoUpload extends Activity {
      	  alert.setView(input);
      	  
      	  alert.setPositiveButton("Ok", new DialogInterface.OnClickListener() {  
-     		    public void onClick(DialogInterface dialog, int whichButton) {  
+     		    public void onClick(DialogInterface dialog, int whichButton) {
+     		    	// Get user entry for photo caption and store in imageCaption
      		        imageCaption = input.getText().toString();
+     		        // Call uploadImage to upload image and caption to facebook album and wall
+     		        uploadImage(data1, imageCaption);
      		        return;                  
      		       }  
      		     });  
 
      		    alert.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
 
-     		        public void onClick(DialogInterface dialog, int which) {
-     		            // TODO Auto-generated method stub
-     		            return;   
+     		    public void onClick(DialogInterface dialog, int which) {
+     		        // TODO Auto-generated method stub
+     		        return;   
      		        }
      		    });
-     		   AlertDialog helpDialog = alert.create();
-     		   helpDialog.show();
+     		   AlertDialog captionDialog = alert.create();
+     		   captionDialog.show();
      		   return imageCaption;
      		   
   }
@@ -202,16 +215,17 @@ public class EasyPhotoUpload extends Activity {
                 // process the response here: (executed in background thread)
                 Log.d("Facebook-Example", "Response: " + response.toString());
                 JSONObject json = Util.parseJson(response);
-                final String src = json.getString("src");
+                @SuppressWarnings("unused")
+				final String src = json.getString("src");
 
                 // then post the processed result back to the UI thread
                 // if we do not do this, an runtime exception will be generated
                 // e.g. "CalledFromWrongThreadException: Only the original
                 // thread that created a view hierarchy can touch its views."
-
-            } catch (JSONException e) {
+                Toast.makeText(getApplicationContext(), "Upload Success", 30).show();
+            	} catch (JSONException e) {
                 Log.w("Facebook-Example", "JSON Error in response");
-            } catch (FacebookError e) {
+            	} catch (FacebookError e) {
                 Log.w("Facebook-Example", "Facebook Error: " + e.getMessage());
             }
         }
