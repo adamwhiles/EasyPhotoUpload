@@ -27,144 +27,160 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.facebook.android.*;
-import com.facebook.android.Facebook.*;
+import com.facebook.android.BaseRequestListener;
+import com.facebook.android.DialogError;
+import com.facebook.android.Facebook;
+import com.facebook.android.Facebook.DialogListener;
+import com.facebook.android.FacebookError;
+import com.facebook.android.Util;
 
 public class EasyPhotoUpload extends Activity {
 	final static int PICK_EXISTING_PHOTO_RESULT_CODE = 1;
-    Facebook facebook = new Facebook("");
-    private SharedPreferences mPrefs;
-    TextView txtImageLocation;
-    File imageFile;
-    String imageCaption = null;
-    byte[] data1 = null;    
-    
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.main);        
-        
-        // Setup access token and store the token
-        mPrefs = getPreferences(MODE_PRIVATE);
-        String access_token = mPrefs.getString("access_token", null);
-        long expires = mPrefs.getLong("access_expires", 0);
-                
-        // Check if access token for Facebook has already need generated and pickup the session so the user doesnt
-        // have to login again.
-        if(access_token != null) {
-            facebook.setAccessToken(access_token);
-        }
-        if(expires != 0) {
-            facebook.setAccessExpires(expires);
-        }
+	Facebook facebook = new Facebook("420243144692776");
+	private SharedPreferences mPrefs;
+	TextView txtImageLocation;
+	File imageFile;
+	String imageCaption = null;
+	byte[] data1 = null;
 
-        if(!facebook.isSessionValid()) {
+	@Override
+	public void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+		setContentView(R.layout.main);
 
-            facebook.authorize(this, new String[] {"user_photos", "publish_stream"}, new DialogListener() {
-                @Override
-                public void onComplete(Bundle values) {
-                    SharedPreferences.Editor editor = mPrefs.edit();
-                    editor.putString("access_token", facebook.getAccessToken());
-                    editor.putLong("access_expires", facebook.getAccessExpires());
-                    editor.commit();
-                }
-    
-                @Override
-                public void onFacebookError(FacebookError error) {}
-    
-                @Override
-                public void onError(DialogError e) {}
-    
-                @Override
-                public void onCancel() {}
-            });
-        }
-        
-        // Set up upload photo button and display in view
-        Button buttonUploadImage = (Button)findViewById(R.id.btnUploadPhotos);
-        buttonUploadImage.setOnClickListener(new Button.OnClickListener(){
-              // Set up onclick event for photo upload button and launch the android gallery
-        	  @Override
-        	  public void onClick(View arg0) {
-        	   // TODO Auto-generated method stub
+		// Setup access token and store the token
+		mPrefs = getPreferences(MODE_PRIVATE);
+		String access_token = mPrefs.getString("access_token", null);
+		long expires = mPrefs.getLong("access_expires", 0);
 
-        	   }});
-        
-        Button buttonSelectImage = (Button)findViewById(R.id.btnSelectImage);
-        buttonSelectImage.setOnClickListener(new Button.OnClickListener(){
-              // Set up onclick event for photo upload button and launch the android gallery
-        	  @Override
-        	  public void onClick(View arg0) {
-        	   // TODO Auto-generated method stub
-        		  
-        	   Intent intent = new Intent(Intent.ACTION_PICK,
-        	     android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-        	   startActivityForResult(intent, PICK_EXISTING_PHOTO_RESULT_CODE);
-        	   
-        	   }});
-        
-    }
-    
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);        
-        switch (requestCode) {
-        
-        // Do this if result came from selection in android photo gallery
-        case PICK_EXISTING_PHOTO_RESULT_CODE: {   
-          
-        if (resultCode == RESULT_OK){
-        	  // Get the Uri of the photo selected in the gallery
-        	  Uri photoUri = data.getData();
-        	  // Get the actual path to the image
-        	  final String imagePath = getPath(photoUri);
-        	  
-              // Process the image taken from the gallery
-              Bitmap bi = BitmapFactory.decodeFile(imagePath);
-              ByteArrayOutputStream baos = new ByteArrayOutputStream();
-              bi.compress(Bitmap.CompressFormat.JPEG, 100, baos);
-              data1 = baos.toByteArray();
-              // Call method to upload the photo to Facebook 
-              createAlert();      
-              
-              }
-        	 
-         
-        break;
-        }
-        default: {
-        facebook.authorizeCallback(requestCode, resultCode, data);
-        break;
-        }
-        
-        
-    }
+		// Check if access token for Facebook has already need generated and
+		// pickup the session so the user doesnt
+		// have to login again.
+		if (access_token != null) {
+			facebook.setAccessToken(access_token);
+		}
+		if (expires != 0) {
+			facebook.setAccessExpires(expires);
+		}
 
-    }
-    // Method to get real path to photo from android gallery and output that path
-    public String getPath(Uri contentUri) {
+		if (!facebook.isSessionValid()) {
 
-        // can post image
-        String [] proj={MediaStore.Images.Media.DATA};
-        Cursor cursor = managedQuery( contentUri,
-                        proj, // Which columns to return
-                        null,       // WHERE clause; which rows to return (all rows)
-                        null,       // WHERE clause selection arguments (none)
-                        null); // Order-by clause (ascending by name)
-        int column_index = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
-        cursor.moveToFirst();
+			facebook.authorize(this, new String[] { "user_photos",
+					"publish_stream" }, new DialogListener() {
+				@Override
+				public void onComplete(Bundle values) {
+					SharedPreferences.Editor editor = mPrefs.edit();
+					editor.putString("access_token", facebook.getAccessToken());
+					editor.putLong("access_expires",
+							facebook.getAccessExpires());
+					editor.commit();
+				}
 
-        return cursor.getString(column_index);
-}
-    // Method for uploading photo to Facebook wall and album.
-    private void uploadImage(byte[] byteArray,String caption) 
-    {
-        Bundle params = new Bundle(); 
-        params.putString(Facebook.TOKEN, facebook.getAccessToken());
-        params.putByteArray("picture", byteArray);  
-        params.putString("caption",caption); 
-        try {
-			facebook.request("me/photos",params,"POST");
+				@Override
+				public void onFacebookError(FacebookError error) {
+				}
+
+				@Override
+				public void onError(DialogError e) {
+				}
+
+				@Override
+				public void onCancel() {
+				}
+			});
+		}
+
+		// Set up upload photo button and display in view
+		Button buttonUploadImage = (Button) findViewById(R.id.btnUploadPhotos);
+		buttonUploadImage.setOnClickListener(new Button.OnClickListener() {
+			// Set up onclick event for photo upload button and launch the
+			// android gallery
+			@Override
+			public void onClick(View arg0) {
+				// TODO Auto-generated method stub
+
+			}
+		});
+
+		Button buttonSelectImage = (Button) findViewById(R.id.btnSelectImage);
+		buttonSelectImage.setOnClickListener(new Button.OnClickListener() {
+			// Set up onclick event for photo upload button and launch the
+			// android gallery
+			@Override
+			public void onClick(View arg0) {
+				// TODO Auto-generated method stub
+
+				Intent intent = new Intent(
+						Intent.ACTION_PICK,
+						android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+				startActivityForResult(intent, PICK_EXISTING_PHOTO_RESULT_CODE);
+
+			}
+		});
+
+	}
+
+	@Override
+	public void onActivityResult(int requestCode, int resultCode, Intent data) {
+		super.onActivityResult(requestCode, resultCode, data);
+		switch (requestCode) {
+
+		// Do this if result came from selection in android photo gallery
+		case PICK_EXISTING_PHOTO_RESULT_CODE: {
+
+			if (resultCode == RESULT_OK) {
+				// Get the Uri of the photo selected in the gallery
+				Uri photoUri = data.getData();
+				// Get the actual path to the image
+				final String imagePath = getPath(photoUri);
+
+				// Process the image taken from the gallery
+				Bitmap bi = BitmapFactory.decodeFile(imagePath);
+				ByteArrayOutputStream baos = new ByteArrayOutputStream();
+				bi.compress(Bitmap.CompressFormat.JPEG, 100, baos);
+				data1 = baos.toByteArray();
+				// Call method to upload the photo to Facebook
+				createAlert();
+
+			}
+
+			break;
+		}
+		default: {
+			facebook.authorizeCallback(requestCode, resultCode, data);
+			break;
+		}
+
+		}
+
+	}
+
+	// Method to get real path to photo from android gallery and output that
+	// path
+	public String getPath(Uri contentUri) {
+
+		// can post image
+		String[] proj = { MediaStore.Images.Media.DATA };
+		Cursor cursor = managedQuery(contentUri, proj, // Which columns to
+														// return
+				null, // WHERE clause; which rows to return (all rows)
+				null, // WHERE clause selection arguments (none)
+				null); // Order-by clause (ascending by name)
+		int column_index = cursor
+				.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
+		cursor.moveToFirst();
+
+		return cursor.getString(column_index);
+	}
+
+	// Method for uploading photo to Facebook wall and album.
+	private void uploadImage(byte[] byteArray, String caption) {
+		Bundle params = new Bundle();
+		params.putString(Facebook.TOKEN, facebook.getAccessToken());
+		params.putByteArray("picture", byteArray);
+		params.putString("caption", caption);
+		try {
+			facebook.request("me/photos", params, "POST");
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -175,64 +191,70 @@ public class EasyPhotoUpload extends Activity {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-             
-     }
-    
-    // Create dialog box to get user input for photo caption
-    public String createAlert() {      
-          AlertDialog.Builder alert = new AlertDialog.Builder(this);                 
-     	  alert.setTitle("Enter Caption for Photo");  
-     	  alert.setMessage("Caption :");
-     	  final EditText input = new EditText(this); 
-     	  alert.setView(input);
-     	  
-     	  alert.setPositiveButton("Ok", new DialogInterface.OnClickListener() {  
-     		    public void onClick(DialogInterface dialog, int whichButton) {
-     		    	// Get user entry for photo caption and store in imageCaption
-     		        imageCaption = input.getText().toString();
-     		        // Call uploadImage to upload image and caption to facebook album and wall
-     		        uploadImage(data1, imageCaption);
-     		        return;                  
-     		       }  
-     		     });  
 
-     		    alert.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+	}
 
-     		    public void onClick(DialogInterface dialog, int which) {
-     		        // TODO Auto-generated method stub
-     		        return;   
-     		        }
-     		    });
-     		   AlertDialog captionDialog = alert.create();
-     		   captionDialog.show();
-     		   return imageCaption;
-     		   
-  }
-    public class PhotoUploadListener extends BaseRequestListener {
+	// Create dialog box to get user input for photo caption
+	public String createAlert() {
+		AlertDialog.Builder alert = new AlertDialog.Builder(this);
+		alert.setTitle("Enter Caption for Photo");
+		alert.setMessage("Caption :");
+		final EditText input = new EditText(this);
+		alert.setView(input);
 
-        public void onComplete(final String response, final Object state) {
-            try {
-                // process the response here: (executed in background thread)
-                Log.d("Facebook-Example", "Response: " + response.toString());
-                JSONObject json = Util.parseJson(response);
-                @SuppressWarnings("unused")
+		alert.setPositiveButton("Ok", new DialogInterface.OnClickListener() {
+			@Override
+			public void onClick(DialogInterface dialog, int whichButton) {
+				// Get user entry for photo caption and store in imageCaption
+				imageCaption = input.getText().toString();
+				// Call uploadImage to upload image and caption to facebook
+				// album and wall
+				uploadImage(data1, imageCaption);
+				return;
+			}
+		});
+
+		alert.setNegativeButton("Cancel",
+				new DialogInterface.OnClickListener() {
+
+					@Override
+					public void onClick(DialogInterface dialog, int which) {
+						// TODO Auto-generated method stub
+						return;
+					}
+				});
+		AlertDialog captionDialog = alert.create();
+		captionDialog.show();
+		return imageCaption;
+
+	}
+
+	public class PhotoUploadListener extends BaseRequestListener {
+
+		@Override
+		public void onComplete(final String response, final Object state) {
+			try {
+				// process the response here: (executed in background thread)
+				Log.d("Facebook-Example", "Response: " + response.toString());
+				JSONObject json = Util.parseJson(response);
+				@SuppressWarnings("unused")
 				final String src = json.getString("src");
 
-                // then post the processed result back to the UI thread
-                // if we do not do this, an runtime exception will be generated
-                // e.g. "CalledFromWrongThreadException: Only the original
-                // thread that created a view hierarchy can touch its views."
-                Toast.makeText(getApplicationContext(), "Upload Success", 30).show();
-            	} catch (JSONException e) {
-                Log.w("Facebook-Example", "JSON Error in response");
-            	} catch (FacebookError e) {
-                Log.w("Facebook-Example", "Facebook Error: " + e.getMessage());
-            }
-        }
+				// then post the processed result back to the UI thread
+				// if we do not do this, an runtime exception will be generated
+				// e.g. "CalledFromWrongThreadException: Only the original
+				// thread that created a view hierarchy can touch its views."
+				Toast.makeText(getApplicationContext(), "Upload Success", 30)
+						.show();
+			} catch (JSONException e) {
+				Log.w("Facebook-Example", "JSON Error in response");
+			} catch (FacebookError e) {
+				Log.w("Facebook-Example", "Facebook Error: " + e.getMessage());
+			}
+		}
 
-        @Override
-        public void onFacebookError(FacebookError e, Object state) {    
-        }
-    }
+		@Override
+		public void onFacebookError(FacebookError e, Object state) {
+		}
+	}
 }
-
