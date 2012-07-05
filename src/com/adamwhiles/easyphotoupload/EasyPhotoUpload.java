@@ -2,6 +2,7 @@ package com.adamwhiles.easyphotoupload;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -135,10 +136,11 @@ public class EasyPhotoUpload extends Activity {
 				final String imagePath = getPath(photoUri);
 
 				// Process the image taken from the gallery
-				Bitmap bi = BitmapFactory.decodeFile(imagePath);
+				Bitmap bi = decodeFile(imagePath);
 				ByteArrayOutputStream baos = new ByteArrayOutputStream();
 				bi.compress(Bitmap.CompressFormat.JPEG, 100, baos);
 				data1 = baos.toByteArray();
+
 				// Call method to upload the photo to Facebook
 				createAlert();
 
@@ -153,6 +155,32 @@ public class EasyPhotoUpload extends Activity {
 
 		}
 
+	}
+
+	private Bitmap decodeFile(String imagePath) {
+		try {
+			// Decode image size
+			BitmapFactory.Options o = new BitmapFactory.Options();
+			o.inJustDecodeBounds = true;
+			BitmapFactory.decodeStream(new FileInputStream(imagePath), null, o);
+
+			// The new size we want to scale to
+			final int REQUIRED_SIZE = 100;
+
+			// Find the correct scale value. It should be the power of 2.
+			int scale = 1;
+			while (o.outWidth / scale / 2 >= REQUIRED_SIZE
+					&& o.outHeight / scale / 2 >= REQUIRED_SIZE)
+				scale *= 2;
+
+			// Decode with inSampleSize
+			BitmapFactory.Options o2 = new BitmapFactory.Options();
+			o2.inSampleSize = scale;
+			return BitmapFactory.decodeStream(new FileInputStream(imagePath),
+					null, o2);
+		} catch (FileNotFoundException e) {
+		}
+		return null;
 	}
 
 	// Method to get real path to photo from android gallery and output that
@@ -244,8 +272,8 @@ public class EasyPhotoUpload extends Activity {
 				// if we do not do this, an runtime exception will be generated
 				// e.g. "CalledFromWrongThreadException: Only the original
 				// thread that created a view hierarchy can touch its views."
-				Toast.makeText(getApplicationContext(), "Upload Success", 30)
-						.show();
+				Toast.makeText(getApplicationContext(), "Upload Success",
+						Toast.LENGTH_LONG).show();
 			} catch (JSONException e) {
 				Log.w("Facebook-Example", "JSON Error in response");
 			} catch (FacebookError e) {
