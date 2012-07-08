@@ -4,23 +4,10 @@
     android:layout_height="fill_parent"
     android:orientation="vertical" >
 
-    <Button
-        android:id="@+id/btnSelectImage"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Select an Image" />
-
-    <Button
-        android:id="@+id/btnUploadPhotos"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Upload Photos" />
-
-    <ListView
+
+        <ListView
         android:id="@+id/lstPhotos"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content" >
-
-    </ListView>
-
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent" >
+</ListView>
 </LinearLayout>

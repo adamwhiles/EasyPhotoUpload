@@ -6,6 +6,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.util.ArrayList;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -22,9 +23,14 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.util.Log;
-import android.view.View;
-import android.widget.Button;
+import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
+import android.view.ViewGroup;
+import android.view.Window;
 import android.widget.EditText;
+import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -43,11 +49,25 @@ public class EasyPhotoUpload extends Activity {
 	File imageFile;
 	String imageCaption = null;
 	byte[] data1 = null;
+	ListView list1;
+	private final ArrayList<Photo> m_photos = new ArrayList<Photo>();
+	private PhotoAdapter m_adapter;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
+		this.requestWindowFeature(Window.FEATURE_NO_TITLE); // Remove default
+															// android title bar
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.main);
+
+		// Setup listview(list1), header and adapter(m_adapter)
+		this.list1 = (ListView) findViewById(R.id.lstPhotos);
+		m_adapter = new PhotoAdapter(this, R.layout.listview_row, m_photos);
+		LayoutInflater infalter = getLayoutInflater();
+		ViewGroup header = (ViewGroup) infalter.inflate(
+				R.layout.listview_header, list1, false);
+		list1.addHeaderView(header);
+		list1.setAdapter(m_adapter);
 
 		// Setup access token and store the token
 		mPrefs = getPreferences(MODE_PRIVATE);
@@ -90,35 +110,6 @@ public class EasyPhotoUpload extends Activity {
 				}
 			});
 		}
-
-		// Set up upload photo button and display in view
-		Button buttonUploadImage = (Button) findViewById(R.id.btnUploadPhotos);
-		buttonUploadImage.setOnClickListener(new Button.OnClickListener() {
-			// Set up onclick event for photo upload button and launch the
-			// android gallery
-			@Override
-			public void onClick(View arg0) {
-				// TODO Auto-generated method stub
-
-			}
-		});
-
-		Button buttonSelectImage = (Button) findViewById(R.id.btnSelectImage);
-		buttonSelectImage.setOnClickListener(new Button.OnClickListener() {
-			// Set up onclick event for photo upload button and launch the
-			// android gallery
-			@Override
-			public void onClick(View arg0) {
-				// TODO Auto-generated method stub
-
-				Intent intent = new Intent(
-						Intent.ACTION_PICK,
-						android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-				startActivityForResult(intent, PICK_EXISTING_PHOTO_RESULT_CODE);
-
-			}
-		});
-
 	}
 
 	@Override
@@ -141,8 +132,8 @@ public class EasyPhotoUpload extends Activity {
 				bi.compress(Bitmap.CompressFormat.JPEG, 100, baos);
 				data1 = baos.toByteArray();
 
-				// Call method to upload the photo to Facebook
-				createAlert();
+				// Call method to get caption and upload the photo to Facebook
+				createAlert(imagePath);
 
 			}
 
@@ -223,7 +214,7 @@ public class EasyPhotoUpload extends Activity {
 	}
 
 	// Create dialog box to get user input for photo caption
-	public String createAlert() {
+	public String createAlert(final String imagePath) {
 		AlertDialog.Builder alert = new AlertDialog.Builder(this);
 		alert.setTitle("Enter Caption for Photo");
 		alert.setMessage("Caption :");
@@ -235,9 +226,10 @@ public class EasyPhotoUpload extends Activity {
 			public void onClick(DialogInterface dialog, int whichButton) {
 				// Get user entry for photo caption and store in imageCaption
 				imageCaption = input.getText().toString();
-				// Call uploadImage to upload image and caption to facebook
-				// album and wall
-				uploadImage(data1, imageCaption);
+				;
+				m_photos.add(new Photo(imagePath, imageCaption));
+				m_adapter.notifyDataSetChanged();
+
 				return;
 			}
 		});
@@ -255,6 +247,38 @@ public class EasyPhotoUpload extends Activity {
 		captionDialog.show();
 		return imageCaption;
 
+	}
+
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu) {
+		MenuInflater inflater = getMenuInflater();
+		inflater.inflate(R.menu.options_menu, menu);
+		return true;
+	}
+
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		// Handle item selection
+		switch (item.getItemId()) {
+		case R.id.add_photo:
+
+			// Display Gallery Picker
+			Intent intent = new Intent(
+					Intent.ACTION_PICK,
+					android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+			startActivityForResult(intent, PICK_EXISTING_PHOTO_RESULT_CODE);
+
+			return true;
+		case R.id.upload_photos:
+
+			// Call uploadImage to upload image and caption to facebook
+			// album and wall
+			// uploadImage(data1, imageCaption);
+			// adapter.add(imagePath)
+			return true;
+		default:
+			return super.onOptionsItemSelected(item);
+		}
 	}
 
 	public class PhotoUploadListener extends BaseRequestListener {
@@ -285,4 +309,5 @@ public class EasyPhotoUpload extends Activity {
 		public void onFacebookError(FacebookError e, Object state) {
 		}
 	}
+
 }
