@@ -43,7 +43,7 @@ import com.facebook.android.Util;
 
 public class EasyPhotoUpload extends Activity {
 	final static int PICK_EXISTING_PHOTO_RESULT_CODE = 1;
-	Facebook facebook = new Facebook("420243144692776");
+	Facebook facebook = new Facebook("");
 	private SharedPreferences mPrefs;
 	TextView txtImageLocation;
 	File imageFile;
