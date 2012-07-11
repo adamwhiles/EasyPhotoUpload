@@ -62,24 +62,32 @@ public class PhotoAdapter extends ArrayAdapter<Photo> {
 
 			ImageView thumb = (ImageView) v
 					.findViewById(R.id.txtPhotoLocationActual);
-			TextView mt = (TextView) v.findViewById(R.id.txtPhotoCaption);
 			TextView mtd = (TextView) v
 					.findViewById(R.id.txtPhotoCaptionActual);
 
+			TextView loc = (TextView) v.findViewById(R.id.txtLocation);
 			// check to see if each individual textview is null.
 			// if not, assign some text!
 
 			if (thumb != null) {
 
 				String imagePath = i.getLocation();
+				loc.setText(imagePath);
 				BitmapFactory.Options options = new BitmapFactory.Options();
-				options.inSampleSize = 50;
+				options.inJustDecodeBounds = true;
 				Bitmap bm = BitmapFactory.decodeFile(imagePath, options);
-				thumb.setImageBitmap(bm);
+				final int REQUIRED_SIZE = 70;
+				int scale = 1;
+				while (options.outWidth / scale / 2 >= REQUIRED_SIZE
+						&& options.outHeight / scale / 2 >= REQUIRED_SIZE)
+					scale *= 2;
+				BitmapFactory.Options options2 = new BitmapFactory.Options();
+				options2.inSampleSize = scale;
+				Bitmap bm2 = BitmapFactory.decodeFile(imagePath, options2);
+				thumb.setImageBitmap(bm2);
+
 			}
-			if (mt != null) {
-				mt.setText("Photo Caption: ");
-			}
+
 			if (mtd != null) {
 				mtd.setText(i.getCaption());
 			}

@@ -24,11 +24,11 @@ import android.os.Bundle;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.view.LayoutInflater;
-import android.view.Menu;
-import android.view.MenuInflater;
-import android.view.MenuItem;
+import android.view.View;
+import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.view.Window;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -47,10 +47,15 @@ public class EasyPhotoUpload extends Activity {
 	private SharedPreferences mPrefs;
 	TextView txtImageLocation;
 	File imageFile;
+	String imagePath;
 	String imageCaption = null;
 	byte[] data1 = null;
 	ListView list1;
+	private Button addPhotoButton;
+	private Button uploadPhotosButton;
 	private final ArrayList<Photo> m_photos = new ArrayList<Photo>();
+	private final ArrayList<String> m_photo_locations = new ArrayList<String>();
+	private final ArrayList<String> m_photo_captions = new ArrayList<String>();
 	private PhotoAdapter m_adapter;
 
 	@Override
@@ -59,6 +64,9 @@ public class EasyPhotoUpload extends Activity {
 															// android title bar
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.main);
+
+		this.addPhotoButton = (Button) this.findViewById(R.id.btnAdd);
+		this.uploadPhotosButton = (Button) this.findViewById(R.id.btnUpload);
 
 		// Setup listview(list1), header and adapter(m_adapter)
 		this.list1 = (ListView) findViewById(R.id.lstPhotos);
@@ -110,6 +118,35 @@ public class EasyPhotoUpload extends Activity {
 				}
 			});
 		}
+
+		this.uploadPhotosButton.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				// Do action to upload photos from array to facebook
+
+				for (int i = 0; i < m_photos.size();) {
+					Bitmap bi = decodeFile(m_photo_locations.get(i));
+					ByteArrayOutputStream baos = new ByteArrayOutputStream();
+					bi.compress(Bitmap.CompressFormat.JPEG, 100, baos);
+					data1 = baos.toByteArray();
+					uploadImage(data1, m_photo_captions.get(i));
+					i++;
+				}
+				Toast.makeText(getApplicationContext(),
+						"Photo Upload Success!", Toast.LENGTH_LONG).show();
+			}
+		});
+
+		this.addPhotoButton.setOnClickListener(new OnClickListener() {
+			@Override
+			public void onClick(View v) {
+				// Do action to pick photo
+				Intent intent = new Intent(
+						Intent.ACTION_PICK,
+						android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+				startActivityForResult(intent, PICK_EXISTING_PHOTO_RESULT_CODE);
+			}
+		});
 	}
 
 	@Override
@@ -124,7 +161,7 @@ public class EasyPhotoUpload extends Activity {
 				// Get the Uri of the photo selected in the gallery
 				Uri photoUri = data.getData();
 				// Get the actual path to the image
-				final String imagePath = getPath(photoUri);
+				imagePath = getPath(photoUri);
 
 				// Process the image taken from the gallery
 				Bitmap bi = decodeFile(imagePath);
@@ -226,8 +263,10 @@ public class EasyPhotoUpload extends Activity {
 			public void onClick(DialogInterface dialog, int whichButton) {
 				// Get user entry for photo caption and store in imageCaption
 				imageCaption = input.getText().toString();
-				;
+
 				m_photos.add(new Photo(imagePath, imageCaption));
+				m_photo_locations.add(imagePath);
+				m_photo_captions.add(imageCaption);
 				m_adapter.notifyDataSetChanged();
 
 				return;
@@ -249,43 +288,42 @@ public class EasyPhotoUpload extends Activity {
 
 	}
 
-	@Override
-	public boolean onCreateOptionsMenu(Menu menu) {
-		MenuInflater inflater = getMenuInflater();
-		inflater.inflate(R.menu.options_menu, menu);
-		return true;
-	}
+	// @Override
+	// public boolean onCreateOptionsMenu(Menu menu) {
+	// MenuInflater inflater = getMenuInflater();
+	// inflater.inflate(R.menu.options_menu, menu);
+	// return true;
+	// }
 
-	@Override
-	public boolean onOptionsItemSelected(MenuItem item) {
-		// Handle item selection
-		switch (item.getItemId()) {
-		case R.id.add_photo:
-
-			// Display Gallery Picker
-			Intent intent = new Intent(
-					Intent.ACTION_PICK,
-					android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-			startActivityForResult(intent, PICK_EXISTING_PHOTO_RESULT_CODE);
-
-			return true;
-		case R.id.upload_photos:
-
-			// Call uploadImage to upload image and caption to facebook
-			// album and wall
-			// uploadImage(data1, imageCaption);
-			// adapter.add(imagePath)
-			return true;
-		default:
-			return super.onOptionsItemSelected(item);
-		}
-	}
+	/*
+	 * 
+	 * public boolean onOptionsItemSelected(MenuItem item) { // Handle item
+	 * selection switch (item.getItemId()) { case R.id.add_photo:
+	 * 
+	 * // Display Gallery Picker Intent intent = new Intent( Intent.ACTION_PICK,
+	 * android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+	 * startActivityForResult(intent, PICK_EXISTING_PHOTO_RESULT_CODE);
+	 * 
+	 * return true; case R.id.upload_photos:
+	 * 
+	 * // Call uploadImage to upload image and caption to facebook // album and
+	 * wall // uploadImage(data1, imageCaption); for (int i = 0; i <
+	 * m_photos.size();) {
+	 * 
+	 * Bitmap bi = decodeFile(m_photo_locations.get(i)); ByteArrayOutputStream
+	 * baos = new ByteArrayOutputStream();
+	 * bi.compress(Bitmap.CompressFormat.JPEG, 100, baos); data1 =
+	 * baos.toByteArray(); uploadImage(data1, m_photo_captions.get(i)); i++; }
+	 * return true; default: return super.onOptionsItemSelected(item); } }
+	 */
 
 	public class PhotoUploadListener extends BaseRequestListener {
 
 		@Override
 		public void onComplete(final String response, final Object state) {
 			try {
+				Toast.makeText(getApplicationContext(), "Upload Success",
+						Toast.LENGTH_LONG).show();
 				// process the response here: (executed in background thread)
 				Log.d("Facebook-Example", "Response: " + response.toString());
 				JSONObject json = Util.parseJson(response);
@@ -296,8 +334,7 @@ public class EasyPhotoUpload extends Activity {
 				// if we do not do this, an runtime exception will be generated
 				// e.g. "CalledFromWrongThreadException: Only the original
 				// thread that created a view hierarchy can touch its views."
-				Toast.makeText(getApplicationContext(), "Upload Success",
-						Toast.LENGTH_LONG).show();
+
 			} catch (JSONException e) {
 				Log.w("Facebook-Example", "JSON Error in response");
 			} catch (FacebookError e) {
