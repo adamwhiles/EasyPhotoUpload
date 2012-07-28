@@ -3,7 +3,7 @@
 
     <string name="hello">Hello World, EasyPhotoUpload!</string>
     <string name="app_name">EasyPhotoUpload</string>
-    <string name="add_photo">Add Photo</string>
-    <string name="upload_photos">Upload Photos</string>
+    <string name="select_album">Choose Album</string>
+    <string name="about">About</string>
 
 </resources>
