@@ -15,7 +15,7 @@
         android:textSize="22dp"
         android:textColor="#FFFFFF"
         android:padding="10dp"
-        android:text="EasyPhotoUpload BETA"
+        android:text="EasyPhotoUpload"
         android:background="#336699" />
 
 </LinearLayout>

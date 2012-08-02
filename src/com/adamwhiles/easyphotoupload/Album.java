@@ -1,6 +1,9 @@
 package com.adamwhiles.easyphotoupload;
 
-public class Album {
+import android.os.Parcel;
+import android.os.Parcelable;
+
+public class Album implements Parcelable {
 	private String id;
 	private String name;
 	private String description;
@@ -9,6 +12,12 @@ public class Album {
 		this.id = id;
 		this.name = name;
 		this.description = description;
+	}
+
+	public Album(Parcel in) {
+		name = in.readString();
+		id = in.readString();
+		description = in.readString();
 	}
 
 	public String getId() {
@@ -35,10 +44,36 @@ public class Album {
 		this.description = description;
 	}
 
+	public static final Parcelable.Creator<Album> CREATOR = new Parcelable.Creator<Album>() {
+		@Override
+		public Album createFromParcel(Parcel in) {
+			return new Album(in);
+		}
+
+		@Override
+		public Album[] newArray(int size) {
+			return new Album[size];
+		}
+	};
+
 	@Override
 	public String toString() {
 		// returning name because that is what will be displayed in the Spinner
 		// control
 		return (this.name);
+	}
+
+	@Override
+	public int describeContents() {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public void writeToParcel(Parcel arg0, int arg1) {
+		// TODO Auto-generated method stub
+		arg0.writeString(name);
+		arg0.writeString(id);
+		arg0.writeString(description);
 	}
 }

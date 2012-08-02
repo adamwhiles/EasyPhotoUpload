@@ -5,10 +5,13 @@ import java.util.ArrayList;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -53,7 +56,7 @@ public class PhotoAdapter extends ArrayAdapter<Photo> {
 		 * 
 		 * Therefore, i refers to the current Item object.
 		 */
-		Photo i = objects.get(position);
+		final Photo i = objects.get(position);
 
 		if (i != null) {
 
@@ -66,6 +69,9 @@ public class PhotoAdapter extends ArrayAdapter<Photo> {
 					.findViewById(R.id.txtPhotoCaptionActual);
 
 			TextView loc = (TextView) v.findViewById(R.id.txtLocation);
+
+			ImageButton delete = (ImageButton) v.findViewById(R.id.delete);
+			delete.setTag(position);
 			// check to see if each individual textview is null.
 			// if not, assign some text!
 
@@ -85,6 +91,15 @@ public class PhotoAdapter extends ArrayAdapter<Photo> {
 				options2.inSampleSize = scale;
 				Bitmap bm2 = BitmapFactory.decodeFile(imagePath, options2);
 				thumb.setImageBitmap(bm2);
+				delete.setOnClickListener(new Button.OnClickListener() {
+					@Override
+					public void onClick(View v) {
+						Log.e("delete", "delete pressed");
+						objects.remove(i);
+						notifyDataSetChanged();
+
+					}
+				});
 
 			}
 
@@ -97,5 +112,4 @@ public class PhotoAdapter extends ArrayAdapter<Photo> {
 		return v;
 
 	}
-
 }

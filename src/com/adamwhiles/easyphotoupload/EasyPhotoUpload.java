@@ -103,6 +103,16 @@ public class EasyPhotoUpload extends Activity {
 		spinnerAdapter = new ArrayAdapter<Album>(this,
 				android.R.layout.simple_spinner_item, m_albums);
 
+		mPrefs = getPreferences(MODE_PRIVATE);
+		String access_token = mPrefs.getString("access_token", null);
+		long expires = mPrefs.getLong("access_expires", 0);
+		if (access_token != null) {
+			facebook.setAccessToken(access_token);
+		}
+		if (expires != 0) {
+			facebook.setAccessExpires(expires);
+		}
+
 		// Check if facebook session exist, if not then get login
 		if (!facebook.isSessionValid()) {
 
@@ -143,13 +153,13 @@ public class EasyPhotoUpload extends Activity {
 
 		// Get saved facebook session
 		mPrefs = getPreferences(MODE_PRIVATE);
-		String access_token = mPrefs.getString("access_token", null);
-		long expires = mPrefs.getLong("access_expires", 0);
+		String access_token2 = mPrefs.getString("access_token", null);
+		long expires2 = mPrefs.getLong("access_expires", 0);
 		if (access_token != null) {
-			facebook.setAccessToken(access_token);
+			facebook.setAccessToken(access_token2);
 		}
 		if (expires != 0) {
-			facebook.setAccessExpires(expires);
+			facebook.setAccessExpires(expires2);
 		}
 	}
 
