@@ -12,9 +12,9 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -28,8 +28,6 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
-import android.view.ViewGroup;
-import android.view.Window;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.ArrayAdapter;
@@ -40,6 +38,9 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.actionbarsherlock.app.SherlockActivity;
+import com.actionbarsherlock.view.Menu;
+import com.actionbarsherlock.view.MenuItem;
 import com.facebook.android.BaseRequestListener;
 import com.facebook.android.DialogError;
 import com.facebook.android.Facebook;
@@ -47,7 +48,7 @@ import com.facebook.android.Facebook.DialogListener;
 import com.facebook.android.FacebookError;
 import com.facebook.android.Util;
 
-public class EasyPhotoUpload extends Activity {
+public class EasyPhotoUpload extends SherlockActivity {
 	public static final String APP_ID = "420243144692776";
 	final static int PICK_EXISTING_PHOTO_RESULT_CODE = 1;
 	private static final String[] PERMISSIONS = new String[] { "user_photos",
@@ -55,13 +56,16 @@ public class EasyPhotoUpload extends Activity {
 	public Facebook facebook;
 	TextView txtImageLocation;
 	File imageFile;
+	Context mainContext;
 	String imagePath;
 	String imageCaption = null;
+	String newAlbum = null;
 	byte[] data1 = null;
 	ListView list1;
+	Menu main_menu;
 	private Button addPhotoButton;
 	private Button uploadPhotosButton;
-	private Spinner albumSpinner;
+	public Spinner albumSpinner;
 	private Album selectedAlbum;
 	private final ArrayList<Photo> m_photos = new ArrayList<Photo>();
 	private final ArrayList<String> m_photo_locations = new ArrayList<String>();
@@ -71,30 +75,32 @@ public class EasyPhotoUpload extends Activity {
 	private PhotoAdapter m_adapter;
 	private SharedPreferences mPrefs;
 	private ProgressDialog progressDialog;
-	private ArrayAdapter<Album> spinnerAdapter;
+	private ProgressDialog progressDialogPicker;
+	public ArrayAdapter<Album> spinnerAdapter;
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
-		this.requestWindowFeature(Window.FEATURE_NO_TITLE); // Remove default
-															// android title bar
+		// this.requestWindowFeature(Window.FEATURE_NO_TITLE); // Remove default
+		// android title bar
 		super.onCreate(savedInstanceState);
 		if (APP_ID == null) {
 			Util.showAlert(this, "Warning", "Facebook Applicaton ID must be "
 					+ "specified before running this app");
+			Log.e("onCreate", "APP_ID is null");
 		}
 		setContentView(R.layout.main);
 		facebook = new Facebook(APP_ID);
-
 		this.addPhotoButton = (Button) this.findViewById(R.id.btnAdd);
 		this.uploadPhotosButton = (Button) this.findViewById(R.id.btnUpload);
+		mainContext = this;
 
 		// Setup listview(list1), header and adapter(m_adapter)
 		this.list1 = (ListView) findViewById(R.id.lstPhotos);
 		m_adapter = new PhotoAdapter(this, R.layout.listview_row, m_photos);
 		LayoutInflater infalter = getLayoutInflater();
-		ViewGroup header = (ViewGroup) infalter.inflate(
-				R.layout.listview_header, list1, false);
-		list1.addHeaderView(header);
+		// ViewGroup header = (ViewGroup) infalter.inflate(
+		// R.layout.listview_header, list1, false);
+		// list1.addHeaderView(header);
 		list1.setAdapter(m_adapter);
 
 		this.albumSpinner = (Spinner) findViewById(R.id.album_dropdown);
@@ -107,6 +113,7 @@ public class EasyPhotoUpload extends Activity {
 		String access_token = mPrefs.getString("access_token", null);
 		long expires = mPrefs.getLong("access_expires", 0);
 		if (access_token != null) {
+			Log.v("onCreate", "access_token is not null" + access_token);
 			facebook.setAccessToken(access_token);
 		}
 		if (expires != 0) {
@@ -115,7 +122,7 @@ public class EasyPhotoUpload extends Activity {
 
 		// Check if facebook session exist, if not then get login
 		if (!facebook.isSessionValid()) {
-
+			Log.v("onCreate", "Facebook session not valid, starting login");
 			facebook.authorize(this, PERMISSIONS, new DialogListener() {
 				@Override
 				public void onComplete(Bundle values) {
@@ -155,82 +162,66 @@ public class EasyPhotoUpload extends Activity {
 		mPrefs = getPreferences(MODE_PRIVATE);
 		String access_token2 = mPrefs.getString("access_token", null);
 		long expires2 = mPrefs.getLong("access_expires", 0);
-		if (access_token != null) {
+		if (access_token2 != null) {
 			facebook.setAccessToken(access_token2);
+			Log.e("AUTH TOKEN", "== " + access_token2);
 		}
-		if (expires != 0) {
+		if (expires2 != 0) {
 			facebook.setAccessExpires(expires2);
+		}
+		getAlbums();
+		Log.v("onCreate", "Downloading album list");
+	}
+
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu) {
+		com.actionbarsherlock.view.MenuInflater inflater = getSupportMenuInflater();
+		inflater.inflate(R.menu.menu, menu);
+		return super.onCreateOptionsMenu(menu);
+	}
+
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		// Handle item selection
+		switch (item.getItemId()) {
+		case R.id.createAlbum:
+			addAlbumAlert();
+			return true;
+		default:
+			return super.onOptionsItemSelected(item);
 		}
 	}
 
 	@Override
 	protected void onResume() {
 		super.onResume();
-		// If facebook session is valid then get list of albums
-		if (facebook.isSessionValid()) {
-			String response = null;
-			try {
-				response = facebook.request("me/albums");
-			} catch (MalformedURLException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-
-			JSONObject json = null;
-			try {
-				json = Util.parseJson(response);
-			} catch (FacebookError e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (JSONException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			JSONArray albums = null;
-			try {
-				albums = json.getJSONArray("data");
-			} catch (JSONException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-
-			if (m_albums.isEmpty()) {
-				m_albums.add(new Album("Choose a Album", "", ""));
-
-				for (int i = 0; i < albums.length();) {
-					JSONObject album = null;
-					try {
-						album = albums.getJSONObject(i);
-					} catch (JSONException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-					try {
-
-						String albumName = album.getString("name");
-						String albumID = album.getString("id");
-						m_albums.add(new Album(albumName, albumID, ""));
-
-					} catch (JSONException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-					i++;
-				}
-			}
+		Log.v("onResume", "Running onResume");
+		mPrefs = getPreferences(MODE_PRIVATE);
+		String access_token = mPrefs.getString("access_token", null);
+		long expires = mPrefs.getLong("access_expires", 0);
+		if (access_token != null) {
+			facebook.setAccessToken(access_token);
+			Log.v("onResume", "access_token not null, token: " + access_token);
+		} else {
+			Log.e("onResume", "access_token null");
 		}
+		if (expires != 0) {
+			facebook.setAccessExpires(expires);
+		}
+		// If facebook session is valid then get list of albums
+
+		getAlbums();
+		Log.v("onResume", "Downloading Albums");
+		this.albumSpinner.setAdapter(spinnerAdapter);
+		this.spinnerAdapter.notifyDataSetChanged();
+		Log.v("onResume", "Updating Spinner");
 		// Update spinner with albums that were downloaded
 		// Define Spinner for album list
-
-		albumSpinner.setAdapter(spinnerAdapter);
-		spinnerAdapter.notifyDataSetChanged();
 
 		this.uploadPhotosButton.setOnClickListener(new OnClickListener() {
 			@Override
 			public void onClick(View v) {
+				Log.v("uploadButton", "uploadButton Clicked");
 
 				if ((selectedAlbum.getId() == null)
 						|| (selectedAlbum.getId() == "")) {
@@ -250,11 +241,12 @@ public class EasyPhotoUpload extends Activity {
 						progressDialog = ProgressDialog
 								.show(EasyPhotoUpload.this, "",
 										"Uploading Photos...");
-
-						new Thread() {
+						Log.v("uploadButton", "Starting upload thread");
+						new Thread(new Runnable() {
 
 							@Override
 							public void run() {
+								Log.v("uploadButton", "running.....");
 
 								try {
 
@@ -267,17 +259,19 @@ public class EasyPhotoUpload extends Activity {
 										data1 = baos.toByteArray();
 										uploadImage(data1,
 												m_photo_captions.get(i));
+										Log.v("uploadButton", "uploaded");
 										i++;
 									}
+									progressDialog.dismiss();
+									uploadAlert();
 								} catch (Exception e) {
 
-									Log.e("tag", e.getMessage());
+									Log.v("uploadButton", e.getMessage());
 
 								}
-								progressDialog.dismiss();
 							}
 
-						}.start();
+						}).start();
 
 					}
 				}
@@ -306,21 +300,13 @@ public class EasyPhotoUpload extends Activity {
 
 			if (resultCode == RESULT_OK) {
 				// Get the Uri of the photo selected in the gallery
-				Uri photoUri = data.getData();
-				// Get the actual path to the image
+				final Uri photoUri = data.getData();
 				imagePath = getPath(photoUri);
 
-				// Process the image taken from the gallery
-				Bitmap bi = decodeFile(imagePath);
-				ByteArrayOutputStream baos = new ByteArrayOutputStream();
-				bi.compress(Bitmap.CompressFormat.JPEG, 100, baos);
-				data1 = baos.toByteArray();
-
-				// Call method to get caption and upload the photo to Facebook
+				// Call method to get caption and upload the photo to
+				// Facebook
 				createAlert(imagePath);
-
 			}
-
 			break;
 		}
 		default: {
@@ -346,6 +332,7 @@ public class EasyPhotoUpload extends Activity {
 
 	private Bitmap decodeFile(String imagePath) {
 		try {
+
 			// Decode image size
 			BitmapFactory.Options o = new BitmapFactory.Options();
 			o.inJustDecodeBounds = true;
@@ -388,8 +375,93 @@ public class EasyPhotoUpload extends Activity {
 		return cursor.getString(column_index);
 	}
 
+	public void getAlbums() {
+		Log.v("GET ALBUMS", "getAlbums started");
+		if (facebook.isSessionValid()) {
+			View vg = findViewById(R.id.album_dropdown);
+			vg.invalidate();
+			Log.v("GET ALBUMS", "Facebook Session is valid");
+			m_albums.clear();
+			Log.v("GET ALBUMS", "Spinner Array Cleared");
+			String response = null;
+			try {
+				response = facebook.request("me/albums");
+			} catch (MalformedURLException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				Log.e("GET ALBUMS", "Error: " + e);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				Log.e("GET ALBUMS", "Error: " + e);
+			}
+
+			JSONObject json = null;
+			try {
+				json = Util.parseJson(response);
+			} catch (FacebookError e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				Log.e("GET ALBUMS", "Error: " + e);
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				Log.e("GET ALBUMS", "Error: " + e);
+			}
+			JSONArray albums = null;
+			try {
+				albums = json.getJSONArray("data");
+			} catch (JSONException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+				Log.e("GET ALBUMS", "Error: " + e);
+			}
+
+			if (m_albums.isEmpty()) {
+				m_albums.add(new Album("Choose a Album", "", ""));
+
+				for (int i = 0; i < albums.length();) {
+					Log.v("GET ALBUMS", "Start process to download albums");
+					JSONObject album = null;
+					try {
+						album = albums.getJSONObject(i);
+					} catch (JSONException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+						Log.e("GET ALBUMS", "Error: " + e);
+					}
+					try {
+
+						String albumName = album.getString("name");
+						String albumID = album.getString("id");
+						m_albums.add(new Album(albumName, albumID, ""));
+						Log.v("GET ALBUMS", "Added album: " + albumName);
+
+					} catch (JSONException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+						Log.e("GET ALBUMS", "Error: " + e);
+					}
+					i++;
+				}
+				View vg1 = null;
+				vg1 = findViewById(R.id.album_dropdown);
+				vg1.invalidate();
+				Log.v("GET ALBUMS", "Updating spinner");
+				albumSpinner.setAdapter(spinnerAdapter);
+				spinnerAdapter.notifyDataSetChanged();
+			}
+		}
+	}
+
 	// Method for uploading photo to Facebook wall and album.
 	private void uploadImage(byte[] byteArray, String caption) {
+		Log.v("UPLOAD IMAGE", "uploadImage Started");
+		if (facebook.getAccessToken() == null
+				|| facebook.getAccessToken() == "") {
+			Log.e("UPLOAD IMAGE",
+					"Facebook Token null, token: " + facebook.getAccessToken());
+		}
 		Bundle params = new Bundle();
 		params.putString(Facebook.TOKEN, facebook.getAccessToken());
 		params.putByteArray("picture", byteArray);
@@ -399,18 +471,22 @@ public class EasyPhotoUpload extends Activity {
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+			Log.e("UPLOAD IMAGE", "Error: " + e);
 		} catch (MalformedURLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+			Log.e("UPLOAD IMAGE", "Error: " + e);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+			Log.e("UPLOAD IMAGE", "Error: " + e);
 		}
 
 	}
 
 	// Create dialog box to get user input for photo caption
 	public String createAlert(final String imagePath) {
+		Log.v("CREATE ALERT", "Started createAlert");
 		AlertDialog.Builder alert = new AlertDialog.Builder(this);
 		alert.setTitle("Enter Caption for Photo");
 		alert.setMessage("Caption :");
@@ -427,6 +503,8 @@ public class EasyPhotoUpload extends Activity {
 				m_photo_locations.add(imagePath);
 				m_photo_captions.add(imageCaption);
 				m_adapter.notifyDataSetChanged();
+				Log.v("CREATE ALERT",
+						"Updated Photo Adapter with Caption and Photo");
 
 				return;
 			}
@@ -447,13 +525,99 @@ public class EasyPhotoUpload extends Activity {
 
 	}
 
+	public void addAlbumAlert() {
+		Log.v("ALBUM ALERT", "Started addAlbumAlert");
+		AlertDialog.Builder alert = new AlertDialog.Builder(this);
+		alert.setTitle("Enter New Album Name");
+		alert.setMessage("Album Name:");
+		final EditText input = new EditText(this);
+		alert.setView(input);
+
+		alert.setPositiveButton("Add Album",
+				new DialogInterface.OnClickListener() {
+					@Override
+					public void onClick(DialogInterface dialog, int whichButton) {
+						// Get user entry for photo caption and store in
+						// imageCaption
+						newAlbum = input.getText().toString();
+						Bundle params = new Bundle();
+						params.putString("name", newAlbum);
+						try {
+							String response = facebook.request("me/albums",
+									params, "POST");
+							Log.v("ALBUM ALERT",
+									"adding album to facebook in spinner alert");
+						} catch (FileNotFoundException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+							Log.e("ALBUM ALERT", "Error: " + e);
+						} catch (MalformedURLException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+							Log.e("ALBUM ALERT", "Error: " + e);
+						} catch (IOException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+							Log.e("ALBUM ALERT", "Error: " + e);
+						}
+						albumSpinner.setAdapter(spinnerAdapter);
+						spinnerAdapter.notifyDataSetChanged();
+						Log.v("ALBUM ALERT", "Updated Spinner");
+						Toast.makeText(getApplicationContext(),
+								"Added New Album!", Toast.LENGTH_SHORT).show();
+						getAlbums();
+						Log.v("ALBUM ALERT", "Updated album list");
+
+					}
+
+				});
+
+		alert.setNegativeButton("Cancel",
+				new DialogInterface.OnClickListener() {
+
+					@Override
+					public void onClick(DialogInterface dialog, int which) {
+						// TODO Auto-generated method stub
+						return;
+					}
+				});
+		AlertDialog createAlbumDialog = alert.create();
+		createAlbumDialog.show();
+
+	}
+
+	public void uploadAlert() {
+		Log.v("UPLOAD AlERT", "Started uploadAlert");
+		final AlertDialog.Builder alert = new AlertDialog.Builder(this);
+		alert.setTitle("Photo Upload Success!");
+		alert.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+			@Override
+			public void onClick(DialogInterface dialog, int whichButton) {
+
+				EasyPhotoUpload.this.list1.invalidate();
+				EasyPhotoUpload.this.m_photos.clear();
+				EasyPhotoUpload.this.m_photo_locations.clear();
+				EasyPhotoUpload.this.m_photo_captions.clear();
+				EasyPhotoUpload.this.list1.setAdapter(m_adapter);
+				EasyPhotoUpload.this.m_adapter.notifyDataSetChanged();
+			}
+
+		});
+		EasyPhotoUpload.this.runOnUiThread(new Runnable() {
+			@Override
+			public void run() {
+				AlertDialog createAlbumDialog = alert.create();
+				createAlbumDialog.show();
+			}
+		});
+
+	}
+
 	public class PhotoUploadListener extends BaseRequestListener {
 
 		@Override
 		public void onComplete(final String response, final Object state) {
 			try {
-				Toast.makeText(getApplicationContext(), "Upload Success",
-						Toast.LENGTH_LONG).show();
 				// process the response here: (executed in background thread)
 				Log.d("Facebook-Example", "Response: " + response.toString());
 				JSONObject json = Util.parseJson(response);
